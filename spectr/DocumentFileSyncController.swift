@@ -150,13 +150,20 @@ final class DocumentFileSyncController: ObservableObject {
     }
 }
 
-private final class PresentedTextFileMonitor: NSObject, NSFilePresenter {
+private final class PresentedTextFileMonitor: NSObject, NSFilePresenter, @unchecked Sendable {
     enum Event {
         case changed(URL)
         case moved(URL)
     }
 
-    var presentedItemURL: URL?
+    private let lock = NSLock()
+    private var _presentedItemURL: URL?
+
+    var presentedItemURL: URL? {
+        get { lock.withLock { _presentedItemURL } }
+        set { lock.withLock { _presentedItemURL = newValue } }
+    }
+
     let presentedItemOperationQueue: OperationQueue
 
     private let onEvent: @Sendable (Event) -> Void
@@ -166,7 +173,7 @@ private final class PresentedTextFileMonitor: NSObject, NSFilePresenter {
         url: URL,
         onEvent: @escaping @Sendable (Event) -> Void
     ) {
-        presentedItemURL = url
+        _presentedItemURL = url
         self.onEvent = onEvent
         let queue = OperationQueue()
         queue.maxConcurrentOperationCount = 1
@@ -189,8 +196,8 @@ private final class PresentedTextFileMonitor: NSObject, NSFilePresenter {
     }
 
     func presentedItemDidChange() {
-        guard let presentedItemURL else { return }
-        onEvent(.changed(presentedItemURL))
+        guard let url = presentedItemURL else { return }
+        onEvent(.changed(url))
     }
 
     func presentedItemDidMove(to newURL: URL) {
