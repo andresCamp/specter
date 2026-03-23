@@ -14,5 +14,5 @@ await build({
   target: "es2020",
   logLevel: "info",
   sourcemap: false,
-  minify: false,
+  minify: true,
 });
