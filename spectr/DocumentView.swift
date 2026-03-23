@@ -45,13 +45,17 @@ struct DocumentView: View {
     @Binding var document: SpectrDocument
     @State private var viewMode: ViewMode = .rendered
     @State private var isPinned = false
-    @State private var usesReaderWidth = false
+    @State private var usesReaderWidth = true
     @State private var textScale: CGFloat = EditorTextScale.defaultValue
     @State private var pinchZoomScale: CGFloat = 1.0
+    @State private var showQuickOpen = false
     @State private var currentWindow: NSWindow?
     @State private var editorZoomController = EditorZoomController()
     @StateObject private var fileSyncController = DocumentFileSyncController()
     @State private var windowPinController = WindowPinController()
+    @State private var isScrolledAtTop = true
+    @State private var editorError: String?
+    @State private var editorReloadToken = 0
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
@@ -64,7 +68,15 @@ struct DocumentView: View {
                 colorScheme: colorScheme,
                 zoomController: editorZoomController,
                 textScale: textScale,
-                usesReaderWidth: usesReaderWidth
+                usesReaderWidth: usesReaderWidth,
+                fileURL: fileURL,
+                onScrollAtTopChanged: { atTop in
+                    isScrolledAtTop = atTop
+                },
+                onError: { message in
+                    editorError = message
+                },
+                reloadToken: editorReloadToken
             )
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -86,6 +98,7 @@ struct DocumentView: View {
         )
         .overlay(alignment: .top) {
             TitleBarFadeOverlay(colorScheme: colorScheme)
+                .opacity(isScrolledAtTop ? 0 : 1)
         }
         .overlay(alignment: .bottomTrailing) {
             Group {
@@ -101,6 +114,26 @@ struct DocumentView: View {
             }
             .padding(.trailing, 18)
             .padding(.bottom, 18)
+        }
+        .overlay {
+            if showQuickOpen {
+                QuickOpenPanel(fileURL: fileURL, currentWindow: currentWindow) {
+                    showQuickOpen = false
+                }
+                .transition(.opacity.animation(.easeOut(duration: 0.12)))
+            }
+        }
+        .overlay {
+            if let editorError {
+                EditorErrorOverlay(message: editorError) {
+                    self.editorError = nil
+                    editorReloadToken += 1
+                }
+                .transition(.opacity.animation(.easeOut(duration: 0.15)))
+            }
+        }
+        .focusedSceneValue(\.quickOpenAction) {
+            showQuickOpen.toggle()
         }
         .focusedSceneValue(
             \.editorTextSizeActions,
@@ -167,6 +200,8 @@ struct DocumentView: View {
         }
         .animation(.spring(response: 0.24, dampingFraction: 0.86), value: isZoomed)
         .animation(.spring(response: 0.24, dampingFraction: 0.86), value: viewMode)
+        .animation(.easeInOut(duration: 0.2), value: isScrolledAtTop)
+        .commandHoldShortcuts()
     }
 
     private var isZoomed: Bool {
@@ -294,6 +329,33 @@ private struct MarginsToggle: View {
     }
 }
 
+private struct EditorErrorOverlay: View {
+    var message: String
+    var onReload: () -> Void
+
+    var body: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 28, weight: .light))
+                .foregroundStyle(.secondary)
+
+            Text(message)
+                .font(.system(size: 13))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+
+            Button("Reload") {
+                onReload()
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+        }
+        .padding(32)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.ultraThinMaterial)
+    }
+}
+
 private struct AmbientWindowBackground: View {
     var colorScheme: ColorScheme
 
@@ -387,7 +449,7 @@ private struct TitleBarFadeOverlay: View {
                 fadeMask
             }
         }
-            .frame(height: 144)
+            .frame(height: 120)
             .ignoresSafeArea(edges: .top)
             .allowsHitTesting(false)
     }
@@ -396,9 +458,9 @@ private struct TitleBarFadeOverlay: View {
         LinearGradient(
             stops: [
                 .init(color: .black, location: 0.0),
-                .init(color: .black.opacity(0.92), location: 0.22),
-                .init(color: .black.opacity(0.56), location: 0.54),
-                .init(color: .black.opacity(0.14), location: 0.86),
+                .init(color: .black, location: 0.35),
+                .init(color: .black.opacity(0.6), location: 0.6),
+                .init(color: .black.opacity(0.15), location: 0.82),
                 .init(color: .clear, location: 1.0),
             ],
             startPoint: .top,
@@ -441,9 +503,9 @@ private struct NativeTitleBarBlurView: NSViewRepresentable {
     private var material: NSVisualEffectView.Material {
         switch colorScheme {
         case .dark:
-            return .hudWindow
+            return .fullScreenUI
         default:
-            return .titlebar
+            return .fullScreenUI
         }
     }
 }
@@ -451,9 +513,9 @@ private struct NativeTitleBarBlurView: NSViewRepresentable {
 private final class MaskedTitleBarBlurView: NSVisualEffectView {
     private let fadeStops: [(location: CGFloat, opacity: CGFloat)] = [
         (0.0, 1.0),
-        (0.22, 0.92),
-        (0.54, 0.56),
-        (0.86, 0.14),
+        (0.35, 1.0),
+        (0.6, 0.6),
+        (0.82, 0.15),
         (1.0, 0.0),
     ]
 

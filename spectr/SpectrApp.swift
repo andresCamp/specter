@@ -9,6 +9,8 @@ import SwiftUI
 
 @main
 struct SpectrApp: App {
+    @Environment(\.openWindow) private var openWindow
+
     var body: some Scene {
         DocumentGroup(newDocument: SpectrDocument()) { file in
             DocumentView(
@@ -18,7 +20,29 @@ struct SpectrApp: App {
         }
         .windowToolbarStyle(.unifiedCompact)
         .commands {
+            WelcomeCommands()
+            QuickOpenCommands()
             EditorTextSizeCommands()
+        }
+
+        Window("Welcome to Spectr", id: "welcome") {
+            WelcomeView()
+        }
+        .windowResizability(.contentSize)
+        .windowStyle(.hiddenTitleBar)
+        .defaultLaunchBehavior(.presented)
+    }
+}
+
+struct WelcomeCommands: Commands {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some Commands {
+        CommandGroup(after: .newItem) {
+            Button("Welcome to Spectr") {
+                openWindow(id: "welcome")
+            }
+            .keyboardShortcut("n", modifiers: [.command, .shift])
         }
     }
 }
