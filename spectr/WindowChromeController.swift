@@ -59,15 +59,19 @@ final class WindowChromeController: ObservableObject {
         localMonitor = NSEvent.addLocalMonitorForEvents(
             matching: [.mouseMoved, .mouseEntered, .mouseExited]
         ) { [weak self] event in
-            self?.checkMouseLocation()
+            guard let self else { return event }
+            Task { @MainActor in
+                self.checkMouseLocation()
+            }
             return event
         }
 
         globalMonitor = NSEvent.addGlobalMonitorForEvents(
             matching: [.mouseMoved, .mouseEntered, .mouseExited]
         ) { [weak self] _ in
+            guard let self else { return }
             Task { @MainActor in
-                self?.checkMouseLocation()
+                self.checkMouseLocation()
             }
         }
     }
@@ -78,8 +82,9 @@ final class WindowChromeController: ObservableObject {
             object: window,
             queue: .main
         ) { [weak self] _ in
+            guard let self else { return }
             Task { @MainActor in
-                self?.applyHoverState(false, animated: true)
+                self.applyHoverState(false, animated: true)
             }
         }
         notificationObservers.append(resignKey)
@@ -89,8 +94,9 @@ final class WindowChromeController: ObservableObject {
             object: window,
             queue: .main
         ) { [weak self] _ in
+            guard let self else { return }
             Task { @MainActor in
-                self?.checkMouseLocation()
+                self.checkMouseLocation()
             }
         }
         notificationObservers.append(becomeKey)
@@ -105,7 +111,11 @@ final class WindowChromeController: ObservableObject {
     }
 
     private func applyHoverState(_ hovered: Bool, animated: Bool) {
-        isWindowHovered = hovered
+        guard hovered != isWindowHovered else { return }
+        // Defer the @Published mutation to avoid publishing during a SwiftUI view update.
+        DispatchQueue.main.async { [weak self] in
+            self?.isWindowHovered = hovered
+        }
         guard let window else { return }
 
         let targetAlpha: CGFloat = hovered ? 1.0 : 0.0

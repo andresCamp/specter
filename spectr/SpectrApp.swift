@@ -18,6 +18,7 @@ struct SpectrApp: App {
                 document: file.$document
             )
         }
+        .defaultSize(width: 800, height: 1000)
         .windowToolbarStyle(.unifiedCompact(showsTitle: false))
         .commands {
             WelcomeCommands()

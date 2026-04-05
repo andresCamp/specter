@@ -17,4 +17,9 @@
   --task-checkbox-fill: color-mix(in srgb, var(--trim-color) 26%, transparent);
   --task-checkbox-inner: var(--trim-color);
   --task-checkbox-hover: color-mix(in srgb, var(--trim-color) 12%, transparent);
+  --comment-highlight-bg: color-mix(in srgb, var(--trim-color) 12%, transparent);
+  --comment-highlight-border: color-mix(in srgb, var(--trim-color) 36%, transparent);
+  --comment-resolve-hover-bg: rgba(255, 255, 255, 0.08);
+  --live-change-highlight-bg: color-mix(in srgb, var(--trim-color) 16%, transparent);
+  --live-change-highlight-border: color-mix(in srgb, var(--trim-color) 36%, transparent);
 }

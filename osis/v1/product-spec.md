@@ -135,9 +135,13 @@ Open source on GitHub. $14.99 one-time on the Mac App Store (48-hour trial, read
 ### v1 — Ship It
 The ten features above plus StoreKit paywall. Ship a beautiful, opinionated markdown viewer that people screenshot and share.
 
-### v2 — Customize + Agent Layer
+### v2 — Markdown-Native Note App
 
-Personalization (settings, custom colors, typography) and the beginning of agent integration (comment system, CLI skill, agent handoff via comments). See `phase-2-customize-and-agent/game-plan.md` for details.
+Evolve from viewer to daily driver. Customization (settings, colors, typography), note creation, global quick open hotkey. Scope shaped by v1 user feedback. See `phase-2-customize-and-agent/game-plan.md`.
+
+### v3 — Cloud + iOS (direction, not commitment)
+
+Cloud sync and an iOS app. Local stays free, cloud is a paid subscription. The standalone Raycast Notes competitor play. Don't build infrastructure before v2 validates daily-driver usage.
 
 ### Future (not committed)
 - Expanded decoration coverage

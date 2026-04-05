@@ -5,6 +5,7 @@
 //  Created by Andrés Campos on 3/23/26.
 //
 
+import Combine
 import SwiftUI
 
 // MARK: - Shortcut Data
@@ -48,12 +49,11 @@ private let shortcutGroups: [ShortcutGroup] = [
 // MARK: - Command Hold Monitor
 
 @MainActor
-@Observable
-final class CommandHoldMonitor {
-    var isShowingShortcuts = false
+final class CommandHoldMonitor: ObservableObject {
+    @Published var isShowingShortcuts = false
 
-    private nonisolated(unsafe) var localMonitor: Any?
-    private nonisolated(unsafe) var keyDownMonitor: Any?
+    private var localMonitor: Any?
+    private var keyDownMonitor: Any?
     private var holdTimer: Timer?
     private let holdDelay: TimeInterval = 0.6
     /// Set when a chord (Cmd+key) fires; suppresses the guide until Cmd is fully released.
@@ -208,7 +208,7 @@ struct KeyboardShortcutsOverlay: View {
 // MARK: - View Modifier
 
 struct CommandHoldShortcutsModifier: ViewModifier {
-    @State private var monitor = CommandHoldMonitor()
+    @StateObject private var monitor = CommandHoldMonitor()
     @Environment(\.colorScheme) private var colorScheme
 
     func body(content: Content) -> some View {

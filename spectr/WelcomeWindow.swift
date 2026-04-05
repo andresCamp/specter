@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct WelcomeView: View {
     @Environment(\.colorScheme) private var colorScheme
@@ -13,6 +14,7 @@ struct WelcomeView: View {
     @Environment(\.dismissWindow) private var dismissWindow
     @Environment(\.newDocument) private var newDocument
     @State private var recentFiles: [URL] = []
+    @State private var isDefaultApp = false
 
     private let trimColor = Color("TrimColor", bundle: nil)
 
@@ -25,7 +27,10 @@ struct WelcomeView: View {
                     .padding(.bottom, 28)
 
                 actionCards
-                    .padding(.bottom, 32)
+                    .padding(.bottom, 16)
+
+                defaultAppStatus
+                    .padding(.bottom, 20)
 
                 recentFilesList
             }
@@ -34,6 +39,7 @@ struct WelcomeView: View {
         .frame(width: 600, height: 520)
         .onAppear {
             recentFiles = loadRecentFiles()
+            isDefaultApp = checkIsDefaultApp()
         }
     }
 
@@ -77,6 +83,14 @@ struct WelcomeView: View {
             ) {
                 openExistingFile()
             }
+        }
+    }
+
+    // MARK: - Default App Status
+
+    private var defaultAppStatus: some View {
+        DefaultAppStatusRow(isDefault: isDefaultApp) {
+            setAsDefaultApp()
         }
     }
 
@@ -140,6 +154,87 @@ struct WelcomeView: View {
 
     private func loadRecentFiles() -> [URL] {
         NSDocumentController.shared.recentDocumentURLs
+    }
+
+    private func checkIsDefaultApp() -> Bool {
+        guard let markdownType = UTType(filenameExtension: "md"),
+              let defaultAppURL = NSWorkspace.shared.urlForApplication(toOpen: markdownType),
+              let appBundleID = Bundle(url: defaultAppURL)?.bundleIdentifier,
+              let myBundleID = Bundle.main.bundleIdentifier
+        else { return false }
+        return appBundleID == myBundleID
+    }
+
+    private func setAsDefaultApp() {
+        guard let markdownType = UTType(filenameExtension: "md"),
+              let appURL = Bundle.main.bundleURL as URL?
+        else { return }
+
+        NSWorkspace.shared.setDefaultApplication(at: appURL, toOpen: markdownType) { error in
+            if error == nil {
+                DispatchQueue.main.async {
+                    isDefaultApp = true
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Default App Status Row
+
+private struct DefaultAppStatusRow: View {
+    var isDefault: Bool
+    var onSetDefault: () -> Void
+
+    @State private var isHovered = false
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        Group {
+            if isDefault {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.green)
+
+                    Text("Default app for Markdown files")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.secondary)
+                }
+            } else {
+                Button(action: onSetDefault) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "circle")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(Color.secondary.opacity(0.5))
+
+                        Text("Set as default app for Markdown files")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(Color.secondary)
+
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(Color.secondary.opacity(0.5))
+                    }
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(
+                                colorScheme == .dark
+                                    ? Color.white.opacity(isHovered ? 0.06 : 0)
+                                    : Color.black.opacity(isHovered ? 0.04 : 0)
+                            )
+                    )
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .onHover { hovering in
+                    isHovered = hovering
+                }
+                .animation(.easeOut(duration: 0.12), value: isHovered)
+            }
+        }
     }
 }
 

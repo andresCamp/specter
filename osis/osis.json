@@ -2,7 +2,40 @@
   "version": "1.0",
   "product": "Spectr",
   "productVersion": "v1",
-  "activePhase": "phase-1-document-surface",
+  "activePhase": "phase-1.4-live-changes",
   "lastTwinUpdate": "2026-03-18",
-  "lastDriftScan": null
+  "lastDriftScan": null,
+  "files": {
+    "twin": "osis/twin.md",
+    "v1": {
+      "vision": "osis/v1/vision.md",
+      "product-spec": "osis/v1/product-spec.md",
+      "changelog": "osis/v1/changelog.md",
+      "monetization": "osis/v1/monetization.md",
+      "launch--implementation-spec": "osis/v1/launch--implementation-spec.md",
+      "phase-1.4-live-changes": {
+        "product-spec": "osis/v1/phase-1.4-live-changes/live-changes--product-spec.md"
+      },
+      "phase-1.5-full-md-support": {
+        "game-plan": "osis/v1/phase-1.5-full-md-support/game-plan.md"
+      },
+      "phase-2-customize-and-agent": {
+        "game-plan": "osis/v1/phase-2-customize-and-agent/game-plan.md"
+      },
+      "archive": {
+        "phase-1-document-surface": {
+          "game-plan": "osis/v1/archive/phase-1-document-surface/game-plan.md",
+          "spectr--implementation-spec": "osis/v1/archive/phase-1-document-surface/spectr--implementation-spec.md",
+          "spectr--implementation-spec-cm6": "osis/v1/archive/phase-1-document-surface/spectr--implementation-spec-cm6.md",
+          "spectr--implementation-spec-rendered-first": "osis/v1/archive/phase-1-document-surface/spectr--implementation-spec-rendered-first.md",
+          "spectr--implementation-spec-reviewable-external-writes": "osis/v1/archive/phase-1-document-surface/spectr--implementation-spec-reviewable-external-writes.md"
+        },
+        "pre-pivot": {
+          "changelog": "osis/v1/archive/pre-pivot/changelog.md",
+          "product-spec": "osis/v1/archive/pre-pivot/product-spec.md",
+          "vision": "osis/v1/archive/pre-pivot/vision.md"
+        }
+      }
+    }
+  }
 }

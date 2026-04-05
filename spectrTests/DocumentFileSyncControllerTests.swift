@@ -31,6 +31,31 @@ final class DocumentFileSyncControllerTests: XCTestCase {
         XCTAssertNil(controller.conflict)
     }
 
+    func testApplyLiveExternalChangeUpdatesBindingAndPublishesLiveChange() {
+        let controller = DocumentFileSyncController()
+        var text = "before"
+        let binding = Binding<String>(get: { text }, set: { text = $0 })
+
+        controller.configure(window: nil, fileURL: nil, text: binding)
+        controller.applyLiveExternalChange("after")
+
+        XCTAssertEqual(text, "after")
+        XCTAssertEqual(controller.liveChange?.previousText, "before")
+        XCTAssertEqual(controller.liveChange?.text, "after")
+    }
+
+    func testApplyLiveExternalChangeIgnoresIdenticalText() {
+        let controller = DocumentFileSyncController()
+        var text = "same"
+        let binding = Binding<String>(get: { text }, set: { text = $0 })
+
+        controller.configure(window: nil, fileURL: nil, text: binding)
+        controller.applyLiveExternalChange("same")
+
+        XCTAssertEqual(text, "same")
+        XCTAssertNil(controller.liveChange)
+    }
+
     func testDisconnectIsIdempotent() {
         let controller = DocumentFileSyncController()
         controller.disconnect()

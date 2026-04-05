@@ -6,6 +6,7 @@ import {
   EditorState,
   Prec,
   type Range,
+  StateEffect,
   StateField,
 } from "@codemirror/state";
 import {
@@ -48,6 +49,7 @@ interface WebKitMessageHandlers {
 
 interface EditorAPI {
   setText(text: string): void;
+  applyExternalTextChange(previousText: string, text: string): void;
   getText(): string;
   setMode(mode: string): void;
   setTheme(theme: string): void;
@@ -109,10 +111,29 @@ interface TableRowInfo {
   cells: TableCell[];
 }
 
+interface LineSlice {
+  text: string;
+  from: number;
+  to: number;
+}
+
+interface ViewportAnchor {
+  offset: number;
+  position: number;
+}
+
+interface TextReplacement {
+  from: number;
+  insert: string;
+  to: number;
+}
+
 // --- Annotations and compartments ---
 
 const fromSwiftAnnotation: AnnotationType<boolean> = Annotation.define<boolean>();
 const autoAdvanceHorizontalRuleAnnotation: AnnotationType<boolean> = Annotation.define<boolean>();
+const setLiveChangeLinesEffect = StateEffect.define<readonly number[]>();
+const clearLiveChangeLinesEffect = StateEffect.define<void>();
 const decorationCompartment = new Compartment();
 const themeCompartment = new Compartment();
 const modeClassCompartment = new Compartment();
@@ -144,6 +165,53 @@ const blockedLineWidgetContexts = new Set([
 ]);
 const minimumTextScale = 11 / 15;
 const maximumTextScale = 2;
+const maximumLiveChangeDiffCells = 600_000;
+const liveChangeHighlightDurationMs = 2_200;
+
+function buildLiveChangeDecorations(
+  state: EditorState,
+  lineNumbers: readonly number[],
+): DecorationSet {
+  const decorations: Range<Decoration>[] = [];
+  const seen = new Set<number>();
+
+  for (const lineNumber of lineNumbers) {
+    if (lineNumber < 1 || lineNumber > state.doc.lines || seen.has(lineNumber)) {
+      continue;
+    }
+
+    seen.add(lineNumber);
+    decorations.push(
+      Decoration.line({ class: "cm-live-change-line" }).range(
+        state.doc.line(lineNumber).from,
+      ),
+    );
+  }
+
+  return Decoration.set(decorations, true);
+}
+
+const liveChangeHighlightField = StateField.define<DecorationSet>({
+  create() {
+    return Decoration.none;
+  },
+  update(value, transaction) {
+    value = value.map(transaction.changes);
+
+    for (const effect of transaction.effects) {
+      if (effect.is(clearLiveChangeLinesEffect)) {
+        value = Decoration.none;
+      } else if (effect.is(setLiveChangeLinesEffect)) {
+        value = buildLiveChangeDecorations(transaction.state, effect.value);
+      }
+    }
+
+    return value;
+  },
+  provide(field) {
+    return EditorView.decorations.from(field);
+  },
+});
 
 // --- Content fingerprint visualization ---
 
@@ -756,6 +824,10 @@ function buildRenderArtifacts(state: EditorState): RenderArtifacts {
         case "Table":
           decorateTable(decorations, atomicRanges, node, state);
           break;
+        case "Comment":
+        case "CommentBlock":
+          decorateComment(decorations, atomicRanges, node, state);
+          break;
         default:
           break;
       }
@@ -824,6 +896,264 @@ function scrollToLineNumber(view: EditorView, lineNum: number): void {
   view.dispatch({
     effects: EditorView.scrollIntoView(line.from, { y: "start" }),
   });
+}
+
+function captureViewportAnchor(view: EditorView): ViewportAnchor {
+  const scroller = view.scrollDOM;
+  const anchorY = scroller.scrollTop + (scroller.clientHeight / 2);
+  const block = view.lineBlockAtHeight(Math.max(0, anchorY));
+  return {
+    offset: anchorY - block.top,
+    position: block.from,
+  };
+}
+
+function restoreViewportAnchor(
+  view: EditorView,
+  anchor: ViewportAnchor,
+  mappedPosition: number,
+): void {
+  const scroller = view.scrollDOM;
+  const clampedPosition = clamp(mappedPosition, 0, view.state.doc.length);
+  const block = view.lineBlockAt(clampedPosition);
+  const maxScrollTop = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+  const targetScrollTop = clamp(
+    block.top + anchor.offset - (scroller.clientHeight / 2),
+    0,
+    maxScrollTop,
+  );
+
+  scroller.scrollTop = targetScrollTop;
+}
+
+function splitLines(text: string): LineSlice[] {
+  if (!text.length) {
+    return [];
+  }
+
+  const lines: LineSlice[] = [];
+  let index = 0;
+
+  while (index < text.length) {
+    const newlineIndex = text.indexOf("\n", index);
+    const end = newlineIndex === -1 ? text.length : newlineIndex + 1;
+    lines.push({
+      text: text.slice(index, end),
+      from: index,
+      to: end,
+    });
+    index = end;
+  }
+
+  return lines;
+}
+
+function boundaryOffset(lines: readonly LineSlice[], index: number, textLength: number): number {
+  if (index <= 0) {
+    return 0;
+  }
+
+  if (index >= lines.length) {
+    return textLength;
+  }
+
+  return lines[index].from;
+}
+
+function coarseReplacementChange(currentText: string, nextText: string): TextReplacement[] {
+  const currentLines = splitLines(currentText);
+  const nextLines = splitLines(nextText);
+
+  let prefix = 0;
+  while (
+    prefix < currentLines.length
+    && prefix < nextLines.length
+    && currentLines[prefix].text === nextLines[prefix].text
+  ) {
+    prefix += 1;
+  }
+
+  let currentSuffix = currentLines.length;
+  let nextSuffix = nextLines.length;
+  while (
+    currentSuffix > prefix
+    && nextSuffix > prefix
+    && currentLines[currentSuffix - 1].text === nextLines[nextSuffix - 1].text
+  ) {
+    currentSuffix -= 1;
+    nextSuffix -= 1;
+  }
+
+  return [{
+    from: boundaryOffset(currentLines, prefix, currentText.length),
+    to: boundaryOffset(currentLines, currentSuffix, currentText.length),
+    insert: nextText.slice(
+      boundaryOffset(nextLines, prefix, nextText.length),
+      boundaryOffset(nextLines, nextSuffix, nextText.length),
+    ),
+  }];
+}
+
+function computeLineReplacements(currentText: string, nextText: string): TextReplacement[] {
+  if (currentText === nextText) {
+    return [];
+  }
+
+  const currentLines = splitLines(currentText);
+  const nextLines = splitLines(nextText);
+
+  let prefix = 0;
+  while (
+    prefix < currentLines.length
+    && prefix < nextLines.length
+    && currentLines[prefix].text === nextLines[prefix].text
+  ) {
+    prefix += 1;
+  }
+
+  let currentSuffix = currentLines.length;
+  let nextSuffix = nextLines.length;
+  while (
+    currentSuffix > prefix
+    && nextSuffix > prefix
+    && currentLines[currentSuffix - 1].text === nextLines[nextSuffix - 1].text
+  ) {
+    currentSuffix -= 1;
+    nextSuffix -= 1;
+  }
+
+  const currentMiddle = currentLines.slice(prefix, currentSuffix);
+  const nextMiddle = nextLines.slice(prefix, nextSuffix);
+  const matrixWidth = nextMiddle.length + 1;
+  const matrixCells = (currentMiddle.length + 1) * matrixWidth;
+
+  if (matrixCells > maximumLiveChangeDiffCells) {
+    return coarseReplacementChange(currentText, nextText);
+  }
+
+  const lcs = new Uint32Array(matrixCells);
+  for (let row = currentMiddle.length - 1; row >= 0; row -= 1) {
+    for (let column = nextMiddle.length - 1; column >= 0; column -= 1) {
+      const index = (row * matrixWidth) + column;
+      if (currentMiddle[row].text === nextMiddle[column].text) {
+        lcs[index] = lcs[index + matrixWidth + 1] + 1;
+      } else {
+        lcs[index] = Math.max(lcs[index + matrixWidth], lcs[index + 1]);
+      }
+    }
+  }
+
+  const replacements: TextReplacement[] = [];
+  let currentIndex = 0;
+  let nextIndex = 0;
+  let pendingCurrentStart: number | null = null;
+  let pendingNextStart: number | null = null;
+
+  const flushPending = (currentEnd: number, nextEnd: number): void => {
+    if (pendingCurrentStart === null || pendingNextStart === null) {
+      return;
+    }
+
+    const absoluteCurrentStart = prefix + pendingCurrentStart;
+    const absoluteCurrentEnd = prefix + currentEnd;
+    const absoluteNextStart = prefix + pendingNextStart;
+    const absoluteNextEnd = prefix + nextEnd;
+
+    replacements.push({
+      from: boundaryOffset(currentLines, absoluteCurrentStart, currentText.length),
+      to: boundaryOffset(currentLines, absoluteCurrentEnd, currentText.length),
+      insert: nextText.slice(
+        boundaryOffset(nextLines, absoluteNextStart, nextText.length),
+        boundaryOffset(nextLines, absoluteNextEnd, nextText.length),
+      ),
+    });
+
+    pendingCurrentStart = null;
+    pendingNextStart = null;
+  };
+
+  while (currentIndex < currentMiddle.length && nextIndex < nextMiddle.length) {
+    if (currentMiddle[currentIndex].text === nextMiddle[nextIndex].text) {
+      flushPending(currentIndex, nextIndex);
+      currentIndex += 1;
+      nextIndex += 1;
+      continue;
+    }
+
+    if (pendingCurrentStart === null || pendingNextStart === null) {
+      pendingCurrentStart = currentIndex;
+      pendingNextStart = nextIndex;
+    }
+
+    const deleteScore = lcs[((currentIndex + 1) * matrixWidth) + nextIndex];
+    const insertScore = lcs[(currentIndex * matrixWidth) + nextIndex + 1];
+    if (deleteScore >= insertScore) {
+      currentIndex += 1;
+    } else {
+      nextIndex += 1;
+    }
+  }
+
+  if (currentIndex < currentMiddle.length || nextIndex < nextMiddle.length) {
+    if (pendingCurrentStart === null || pendingNextStart === null) {
+      pendingCurrentStart = currentIndex;
+      pendingNextStart = nextIndex;
+    }
+    currentIndex = currentMiddle.length;
+    nextIndex = nextMiddle.length;
+  }
+
+  flushPending(currentIndex, nextIndex);
+  return replacements;
+}
+
+function changedLineNumbers(
+  state: EditorState,
+  changes: {
+    iterChanges(
+      callback: (
+        fromA: number,
+        toA: number,
+        fromB: number,
+        toB: number,
+      ) => void,
+    ): void;
+  },
+): number[] {
+  const lines = new Set<number>();
+
+  changes.iterChanges((_fromA, _toA, fromB, toB) => {
+    if (fromB === toB) {
+      lines.add(state.doc.lineAt(Math.min(fromB, state.doc.length)).number);
+      return;
+    }
+
+    const startLine = state.doc.lineAt(fromB).number;
+    const endLine = state.doc.lineAt(Math.max(fromB, toB - 1)).number;
+    for (let lineNumber = startLine; lineNumber <= endLine; lineNumber += 1) {
+      lines.add(lineNumber);
+    }
+  });
+
+  return [...lines].sort((left, right) => left - right);
+}
+
+function visibleLineRange(view: EditorView): { start: number; end: number } {
+  const scroller = view.scrollDOM;
+  const topBlock = view.lineBlockAtHeight(Math.max(0, scroller.scrollTop));
+  const bottomBlock = view.lineBlockAtHeight(
+    Math.max(0, scroller.scrollTop + scroller.clientHeight - 1),
+  );
+
+  return {
+    start: view.state.doc.lineAt(topBlock.from).number,
+    end: view.state.doc.lineAt(bottomBlock.from).number,
+  };
+}
+
+function visibleChangedLineNumbers(view: EditorView, lineNumbers: readonly number[]): number[] {
+  const { start, end } = visibleLineRange(view);
+  return lineNumbers.filter((lineNumber) => lineNumber >= start && lineNumber <= end);
 }
 
 function addReplacement(
@@ -1619,6 +1949,186 @@ class HorizontalRuleWidget extends WidgetType {
   }
 }
 
+function decorateComment(
+  decorations: Range<Decoration>[],
+  atomicRanges: Range<Decoration>[],
+  node: SyntaxNodeRef,
+  state: EditorState,
+): void {
+  const renderedComment = parseRenderedComment(node, state);
+  if (!renderedComment) {
+    return;
+  }
+
+  addReplacement(
+    decorations,
+    atomicRanges,
+    renderedComment.from,
+    renderedComment.visibleFrom,
+  );
+  addReplacement(
+    decorations,
+    atomicRanges,
+    renderedComment.visibleTo,
+    renderedComment.to,
+  );
+
+  if (renderedComment.visibleFrom >= renderedComment.visibleTo) {
+    return;
+  }
+
+  addMark(
+    decorations,
+    renderedComment.visibleFrom,
+    renderedComment.visibleTo,
+    "cm-comment-rendered",
+  );
+
+  if (renderedComment.block) {
+    addLineClassesForRange(
+      decorations,
+      state,
+      renderedComment.visibleFrom,
+      renderedComment.visibleTo,
+      "cm-comment-block-line",
+    );
+  }
+
+  decorations.push(
+    Decoration.widget({
+      widget: new CommentResolveWidget(renderedComment),
+      side: 1,
+    }).range(renderedComment.visibleTo),
+  );
+}
+
+interface RenderedComment {
+  from: number;
+  to: number;
+  visibleFrom: number;
+  visibleTo: number;
+  block: boolean;
+}
+
+function parseRenderedComment(node: SyntaxNodeRef, state: EditorState): RenderedComment | null {
+  const text = state.sliceDoc(node.from, node.to);
+  if (!text.startsWith("<!--") || !text.endsWith("-->")) {
+    return null;
+  }
+
+  let visibleStartOffset = 4;
+  let visibleEndOffset = text.length - 3;
+
+  if (node.name === "CommentBlock") {
+    const leadingDelimiterLine = /^<!--[ \t]*\r?\n/.exec(text);
+    const trailingDelimiterLine = /\r?\n[ \t]*-->$/.exec(text);
+    if (leadingDelimiterLine) {
+      visibleStartOffset = leadingDelimiterLine[0].length;
+    } else if (text[visibleStartOffset] === " ") {
+      visibleStartOffset += 1;
+    }
+    if (trailingDelimiterLine) {
+      visibleEndOffset = text.length - trailingDelimiterLine[0].length;
+    } else if (text[visibleEndOffset - 1] === " ") {
+      visibleEndOffset -= 1;
+    }
+  } else {
+    if (text[visibleStartOffset] === " ") {
+      visibleStartOffset += 1;
+    }
+    if (text[visibleEndOffset - 1] === " ") {
+      visibleEndOffset -= 1;
+    }
+  }
+
+  if (visibleStartOffset > visibleEndOffset) {
+    visibleStartOffset = visibleEndOffset;
+  }
+
+  return {
+    from: node.from,
+    to: node.to,
+    visibleFrom: node.from + visibleStartOffset,
+    visibleTo: node.from + visibleEndOffset,
+    block: node.name === "CommentBlock",
+  };
+}
+
+function addLineClassesForRange(
+  decorations: Range<Decoration>[],
+  state: EditorState,
+  from: number,
+  to: number,
+  className: string,
+): void {
+  if (from >= to) {
+    return;
+  }
+
+  let line = state.doc.lineAt(from);
+  while (true) {
+    addLineClass(decorations, line.from, className);
+    if (line.to >= to || line.number >= state.doc.lines) {
+      break;
+    }
+    line = state.doc.line(line.number + 1);
+  }
+}
+
+class CommentResolveWidget extends WidgetType {
+  comment: RenderedComment;
+
+  constructor(comment: RenderedComment) {
+    super();
+    this.comment = comment;
+  }
+
+  eq(other: CommentResolveWidget): boolean {
+    return (
+      other.comment.from === this.comment.from &&
+      other.comment.to === this.comment.to &&
+      other.comment.visibleFrom === this.comment.visibleFrom &&
+      other.comment.visibleTo === this.comment.visibleTo
+    );
+  }
+
+  ignoreEvent(): boolean {
+    return false;
+  }
+
+  toDOM(view: EditorView): HTMLElement {
+    const button = document.createElement("button");
+    button.className = "cm-comment-resolve";
+    button.type = "button";
+    button.textContent = "Resolve";
+    button.setAttribute("aria-label", "Resolve comment");
+    button.addEventListener("mousedown", (event) => {
+      event.preventDefault();
+    });
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      resolveRenderedComment(view, this.comment);
+    });
+    return button;
+  }
+}
+
+function resolveRenderedComment(view: EditorView, comment: RenderedComment): void {
+  const changes = [];
+  if (comment.from < comment.visibleFrom) {
+    changes.push({ from: comment.from, to: comment.visibleFrom, insert: "" });
+  }
+  if (comment.visibleTo < comment.to) {
+    changes.push({ from: comment.visibleTo, to: comment.to, insert: "" });
+  }
+  if (!changes.length) {
+    return;
+  }
+  view.dispatch({ changes });
+  requestAnimationFrame(() => view.focus());
+}
+
 function isCursorOnSyntaxNode(state: EditorState, node: SyntaxNodeRef): boolean {
   const selection = state.selection.main;
   return (
@@ -2360,6 +2870,7 @@ const view = new EditorView({
       gutterCompartment.of(currentGutterExtension()),
       activeLineCompartment.of([]),
       scrollBehaviorCompartment.of([]),
+      liveChangeHighlightField,
       contentFingerprintPlugin,
       scrollOffsetReporter,
       scrollLineIndicator,
@@ -2373,6 +2884,18 @@ const view = new EditorView({
 });
 
 let hasSetModeOnce = false;
+let liveChangeHighlightTimer: number | null = null;
+
+function scheduleLiveChangeHighlightClear(): void {
+  if (liveChangeHighlightTimer !== null) {
+    window.clearTimeout(liveChangeHighlightTimer);
+  }
+
+  liveChangeHighlightTimer = window.setTimeout(() => {
+    liveChangeHighlightTimer = null;
+    view.dispatch({ effects: clearLiveChangeLinesEffect.of() });
+  }, liveChangeHighlightDurationMs);
+}
 
 function setMode(mode: string): void {
   const isInitial = !hasSetModeOnce;
@@ -2424,6 +2947,48 @@ function setText(text: string): void {
   });
 }
 
+function applyExternalTextChange(previousText: string, text: string): void {
+  const nextText = text ?? "";
+  const currentText = view.state.doc.toString();
+  if (nextText === currentText) {
+    return;
+  }
+
+  const replacements = computeLineReplacements(currentText, nextText);
+  if (!replacements.length) {
+    return;
+  }
+
+  const anchor = captureViewportAnchor(view);
+  const transaction = view.state.update({
+    annotations: fromSwiftAnnotation.of(true),
+    changes: replacements,
+  });
+  const mappedAnchorPosition = transaction.changes.mapPos(anchor.position, -1);
+  const lineNumbers = changedLineNumbers(transaction.state, transaction.changes);
+
+  view.dispatch(transaction);
+
+  requestAnimationFrame(() => {
+    restoreViewportAnchor(view, anchor, mappedAnchorPosition);
+
+    const visibleLines = visibleChangedLineNumbers(view, lineNumbers);
+    if (!visibleLines.length) {
+      view.dispatch({ effects: clearLiveChangeLinesEffect.of() });
+      return;
+    }
+
+    view.dispatch({
+      effects: setLiveChangeLinesEffect.of(visibleLines),
+    });
+    scheduleLiveChangeHighlightClear();
+  });
+
+  if (previousText !== currentText) {
+    console.warn("[Spectr Editor] External change baseline drifted before apply.");
+  }
+}
+
 function scrollToTop(): void {
   view.scrollDOM.scrollTop = 0;
 }
@@ -2473,6 +3038,7 @@ function setFileInfo(path: string, lastModified: string): void {
 
 (globalThis as unknown as Window).editor = {
   setText,
+  applyExternalTextChange,
   getText() {
     return view.state.doc.toString();
   },
