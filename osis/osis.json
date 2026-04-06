@@ -3,7 +3,7 @@
   "product": "Spectr",
   "productVersion": "v1",
   "activePhase": "phase-1.4-live-changes",
-  "lastTwinUpdate": "2026-03-18",
+  "lastTwinUpdate": "2026-04-05",
   "lastDriftScan": null,
   "files": {
     "twin": "osis/twin.md",

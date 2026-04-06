@@ -7,75 +7,223 @@
 Spectr is the most beautiful way to read and edit markdown on macOS. Open a `.md` file and it looks incredible — clean typography, generous spacing, thoughtful design. Raycast Notes energy, but for real files on disk. 48-hour free trial, $14.99 one-time on the Mac App Store. Open source on GitHub.
 
 **Bundle ID:** `md.spectr.app`
-**Platform:** macOS (deployment target 26.2)
-**Architecture:** SwiftUI Document App (FileDocument)
+**Platform:** macOS
+**Architecture:** SwiftUI Document App (FileDocument) + WKWebView (CodeMirror 6)
 
-## Systems
-
-### App Shell (`SpectrApp`)
-The application entry point. Uses `DocumentGroup` to manage document lifecycle. Each document opens in its own window with a `DocumentView`. A separate `Window(id: "welcome")` shows the welcome screen on launch.
-
-Menu commands are defined in `QuickOpenCommands`: ⌘P (Quick Open), ⌘R (toggle mode), ⌘⇧P (pin), ⌘⇧M (reader margins).
-
-### Welcome Screen (`WelcomeWindow`)
-A 600×520 launch window with the app icon, "New Document" and "Open File" action cards, and a recent files list from `NSDocumentController`. Dismisses when a document opens. Warm-tinted background with subtle gradient.
-
-### Document Model (`SpectrDocument`)
-A `FileDocument` conforming struct that holds a single `text: String` property. Reads and writes UTF-8 markdown files via `UTType.markdown`. Default content is empty.
-
-### Document Surface (`DocumentView` + `EditorWebView`)
-A SwiftUI document view that owns the rendered/raw toggle (⌘R) and embeds a `WKWebView` bridge. The web view hosts a bundled CodeMirror 6 editor, keeping the markdown string as the native source of truth while rendered mode is produced through decorations.
-
-Supports float-on-top (⌘⇧P) and reader width toggle (⌘⇧M).
-
-### Quick Open Panel (`QuickOpenPanel`)
-A floating overlay triggered by ⌘P. Scans the project root (detected via `.git`/`.gitignore`/`.github` markers) for all `.md` files. Displays a card grid grouped by directory, sorted by proximity to the current file.
-
-Each card shows a **fingerprint mosaic** — a deterministic visual pattern generated from the file's content hash using FNV-1a and Mulberry32 PRNG (matching implementations in both Swift and `editor.js`). Cards support keyboard navigation (arrow keys + Enter) and mouse.
-
-Opening a file replaces the current document in the same window position.
-
-### Editor Bundle
-Static HTML/CSS/JS assets live under `spectr/Resources/Editor`. A repo-local workspace under `tools/editor` pins the CodeMirror/esbuild dependencies and rebuilds the checked-in `editor.js` bundle.
-
-### Asset Catalog
-Accent color, trim color, and app icon slots, plus bundled editor resources.
-
-## System Diagram
+## Master Diagram
 
 ```
-┌──────────────────────────────────────────┐
-│            SpectrApp (@main)             │
-│                                          │
-│  Window("welcome")   DocumentGroup       │
-│       │                    │             │
-│       ▼                    ▼             │
-│  WelcomeView         DocumentView        │
-│  ┌────────────┐      ┌──────────────┐   │
-│  │ Icon/Title │      │ EditorWebView│   │
-│  │ New / Open │      │ (WKWebView)  │   │
-│  │ Recents    │      │ CM6 + Bridge │   │
-│  └────────────┘      └──────┬───────┘   │
-│                             │            │
-│                    QuickOpenPanel (⌘P)   │
-│                    ┌──────────────┐      │
-│                    │ Search + Grid│      │
-│                    │ Fingerprints │      │
-│                    └──────────────┘      │
-│                             │            │
-│                      SpectrDocument      │
-│                      (FileDocument)      │
-│                      text: String        │
-│                             │            │
-│                        .md files         │
-└──────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                      SpectrApp (@main)                          │
+│                                                                 │
+│  Window("welcome")                DocumentGroup                 │
+│       │                                │                        │
+│       ▼                                ▼                        │
+│  WelcomeView                     DocumentView                   │
+│  ┌──────────────┐      ┌──────────────────────────────────┐     │
+│  │ Icon/Title   │      │  Toolbar: title, pin, mode       │     │
+│  │ New / Open   │      │  ┌────────────────────────────┐  │     │
+│  │ Set Default  │      │  │     EditorWebView          │  │     │
+│  │ Recents      │      │  │  ┌──────────────────────┐  │  │     │
+│  └──────────────┘      │  │  │ WKWebView + CM6      │  │  │     │
+│                        │  │  │ ┌──────────────────┐  │  │  │     │
+│                        │  │  │ │ Fingerprint      │  │  │  │     │
+│                        │  │  │ │ Mosaic + Meta    │  │  │  │     │
+│                        │  │  │ ├──────────────────┤  │  │  │     │
+│                        │  │  │ │ Rendered / Raw   │  │  │  │     │
+│                        │  │  │ │ Markdown Content │  │  │  │     │
+│                        │  │  │ └──────────────────┘  │  │  │     │
+│                        │  │  └──────────────────────┘  │  │     │
+│                        │  └────────────────────────────┘  │     │
+│                        │  Overlays: QuickOpen, Stats,     │     │
+│                        │    Margins, Zoom, Shortcuts, Err │     │
+│                        └──────────────────────────────────┘     │
+│                                     │                           │
+│               ┌─────────────────────┼──────────────────────┐    │
+│               ▼                     ▼                      ▼    │
+│     FileSyncController      WindowPinController   ChromeController│
+│     (NSFilePresenter)       (float-on-top)        (hover hide)  │
+│               │                                                 │
+│               ▼                                                 │
+│         .md files on disk                                       │
+└─────────────────────────────────────────────────────────────────┘
 ```
+
+## Product Loops
+
+### Open & Read
+```
+Launch → Welcome Window → New / Open / Recent → DocumentView → Rendered markdown
+```
+
+### Edit
+```
+Click into rendered content → type → CM6 dispatches edit → fromSwift annotation
+guards against echo → textChanged message → Swift binding updates → autosave
+```
+
+### Mode Toggle
+```
+⌘R → fade-out (90ms) → switch decorations in CM6 → fade-in (130ms)
+Rendered mode: rich typography, hidden syntax, line decorations
+Raw mode: monospace, line numbers, active-line highlight
+```
+
+### External File Change (Live Changes)
+```
+Another process writes file → NSFilePresenter fires → FileSyncController
+→ if no local edits: NSDocument reverts → coordinator detects external change
+→ editor.applyExternalTextChange() → LCS diff → Phase 1: blur old lines (620ms)
+→ Phase 2: apply text + height spacer + fade-in new lines (3.2s) → spacer clears
+→ if local edits: conflict dialog → user picks reload or keep
+```
+
+### Quick Open
+```
+⌘P → overlay → scan project root (.git marker) for .md files → card grid
+→ search/filter → keyboard or mouse select → opens file in same window position
+```
+
+### Zoom
+```
+Pinch gesture → NSScrollView magnification (1x–3x) → zoom badge appears
+→ snap-to-default when near 1x → ⌘0 resets → badge disappears
+```
+
+## Pipeline: File → Screen
+
+```
+.md on disk
+    │
+    ▼
+SpectrDocument (FileDocument, UTF-8 read/write)
+    │
+    ▼
+SwiftUI @Binding<String>  ←──── autosave writes back
+    │
+    ▼
+EditorWebView.Coordinator (pushStateIfNeeded)
+    │  pushes: text, mode, theme, textScale, readerWidth, fileInfo
+    ▼
+WKWebView ←→ editor.js (CodeMirror 6)
+    │
+    ├─ Rendered mode: syntax tree → decoration pass per node type
+    │    headings, bold, italic, inline code, links, lists, tasks,
+    │    blockquotes, fenced code, horizontal rules, tables, comments,
+    │    bare domains, bare task lines → hidden syntax + widget replacements
+    │
+    ├─ Raw mode: monospace, line numbers, active-line gutter
+    │
+    ├─ Document header: fingerprint mosaic canvas + file meta (path, date)
+    │
+    └─ Live change layer: blur field + highlight field + height spacer field
+```
+
+## Product-Specific Systems
+
+### Rendered Mode Engine
+**JTBD:** Make markdown look beautiful without converting to HTML — stay editable.
+**How:** CodeMirror 6 decorations. On every doc change, walks the Lezer syntax tree and produces mark/line/widget decorations for each node type. Syntax markers (##, **, \`) are hidden via atomic ranges; widgets replace checkboxes, list bullets, horizontal rules, table cells.
+**Capabilities:** Headings (H1–H6 with scaled sizes), bold, italic, inline code (pill-shaped), links (clickable, opens in system browser), ordered/unordered lists (custom bullet dots, colored numbers), task lists with interactive checkboxes, blockquotes (left-border), fenced code blocks, horizontal rules (active-state highlight), tables (grid layout with alignment), HTML comments (styled, with resolve button), bare domain auto-linking, markdown formatting shortcuts (⌘B/⌘I/⌘E), Enter continues list/task markup, Backspace removes empty list items.
+**Reader width:** Toggle between centered 720px column and full-bleed.
+**Maturity:** Complete. All standard markdown elements rendered. Tables, comments, and bare domains are bonus features beyond basic markdown.
+
+### Document Header (Fingerprint Mosaic)
+**JTBD:** Give each document a unique visual identity at the top.
+**How:** A `<canvas>` element placed above the content. FNV-1a hashes the document text, seeds a Mulberry32 PRNG, generates a grid of colored tiles using the theme's trim color and a neutral. Tiles have per-tile "reach" values. An idle twinkle animation and a reactive entropy animation (on edits) add life.
+**Meta row:** Shows file path (click to copy) and last-edited date.
+**Maturity:** Polished. Includes idle animation, edit-reactive animation, and theme-aware color rendering.
+
+### Live External Change Visualization
+**JTBD:** When another tool edits the file, show what changed without losing scroll position.
+**How:** Two-phase animation. Phase 1: blur old changed lines (600ms ease-in). Phase 2: swap text via LCS-based line diff, insert height spacer widget to prevent scroll jump, fade-in new lines with highlight (3s spring curve). Height spacer smoothly transitions to zero (700ms) so surrounding content reflows gradually. Diff limited to 600K cells to stay fast.
+**Viewport anchor:** Before applying changes, captures a reference position in the viewport. After applying, restores scroll so the same content stays in view.
+**Conflict handling:** If the user has unsaved local edits when the file changes on disk, a native alert offers "Reload from Disk" or "Keep Local Changes."
+**Maturity:** Complete. Scroll-stable, animated, with conflict resolution.
+
+### Quick Open Panel
+**JTBD:** Navigate between markdown files in a project without leaving the window.
+**How:** Detects project root via `.git`/`.gitignore`/`.github` markers (walks up 20 levels). Scans for all `.md` files, skipping standard build/dependency directories. Groups by directory, sorts by proximity to current file. Each card shows a fingerprint mosaic (same FNV-1a/Mulberry32 algorithm as document header) plus filename and path.
+**Navigation:** Search field filters by name/path. Keyboard arrows + Enter or mouse click. Opening a file closes current window and opens new one in same frame position.
+**Maturity:** Complete. Keyboard + mouse navigation, search filtering, proximity sorting.
+
+### Text Size & Zoom
+**JTBD:** Let users adjust reading comfort.
+**Text scale:** ⌘+/⌘-/⌘0. Applied as a CSS custom property (`--spectr-text-scale`) that multiplies base font sizes. Range: 73%–200%. Affects both rendered and raw modes.
+**Pinch zoom:** NSScrollView magnification (1x–3x). Zoom badge shows percentage and viewport minimap. Snaps back to 1x when close. Horizontal scroll enabled when zoomed.
+**Maturity:** Complete.
+
+### Keyboard Shortcuts Guide
+**JTBD:** Discoverability without cluttering the UI.
+**How:** Hold ⌘ for 0.6s (without pressing another key) and a floating overlay appears showing all shortcuts grouped by File/Edit/View. Chord usage (⌘+key) suppresses the guide. Releasing ⌘ dismisses it.
+**Maturity:** Complete.
+
+### Shortcut Tooltips
+**JTBD:** Contextual hints on toolbar buttons and badges.
+**How:** A custom floating `NSPanel` tooltip system. Hovering a button triggers a capsule-shaped tooltip (after a delay) showing the action label and key badge. Panel is non-activating, follows the source view's screen position, clamps to screen edges.
+**Maturity:** Complete.
+
+### Document Stats Badge
+**JTBD:** Quick document metrics without a menu.
+**How:** A capsule in the bottom-left corner (rendered mode only, visible on hover). Click cycles through: character count, word count, approximate token count (~4 chars/token).
+**Maturity:** Complete.
+
+## Standard Systems
+
+- **SpectrDocument** — `FileDocument` struct. Reads/writes UTF-8 `.md` files. Default content is empty string. Registered as editor for `net.daringfireball.markdown` UTType.
+- **DocumentFileSyncController** — `NSFilePresenter`-based file watcher. Detects external changes and moves. Auto-reverts when no local edits; shows conflict dialog otherwise. Single authority: NSDocument handles all file coordination.
+- **WindowPinController** — Sets window level to `.floating` and adds `canJoinAllSpaces` behavior. Toggled via ⌘⇧P. Restores original level on unpin.
+- **WindowChromeController** — Tracks mouse hover over the window. When not hovered, hides traffic-light buttons (close/minimize/zoom), toolbar actions, stats badge, and margins toggle. All fade with 200ms animation.
+- **EditorZoomController** — Wraps `NSScrollView.magnification`. Handles pinch zoom, snap-to-default on gesture end, zoom in/out/reset. Reports scale changes upstream.
+- **DocumentEditedObserver** — KVO on `NSWindow.isDocumentEdited`. Currently wired but not driving visible UI.
+- **ContentView** — Legacy shim from Xcode template. Forwards to DocumentView.
+- **Editor Build Pipeline** — TypeScript source in `tools/editor/src/editor.ts`. Built with esbuild into `spectr/Resources/Editor/editor.js` (~541KB). Dependencies: CodeMirror 6 (state, view, commands, lang-markdown, language, search), Lezer markdown parser with Table, TaskList, Autolink extensions.
+- **Theming** — Two CSS files (`theme-light.css`, `theme-dark.css`) switched by toggling `<link>` disabled attributes. Trim color: warm gold (dark: `#e3bd96`, light: `#8a6528`). SwiftUI side has matching ambient background gradients.
+
+## Actors
+
+```
+User ──── opens/edits ────► Spectr Window
+                                │
+                    ┌───────────┼───────────┐
+                    ▼           ▼           ▼
+              SwiftUI Doc   WKWebView   NSDocument
+              Binding       (CM6)       (autosave)
+                    │           │           │
+                    └───────────┼───────────┘
+                                ▼
+                          .md file on disk
+                                ▲
+                                │
+External Tool ── writes ────────┘
+    (Vim, VS Code, AI agent, etc.)
+```
+
+**User → Spectr:** Opens files, types, toggles modes, uses Quick Open, adjusts zoom/text size, pins window.
+**Spectr → File System:** Autosaves via NSDocument. Reads on open/revert.
+**File System → Spectr:** NSFilePresenter notifies on external write/move.
+**CM6 → Swift:** `textChanged` message on every edit. `scrollAtTop`, `editorReady`, `editorError`, `openLink` messages.
+**Swift → CM6:** `setText`, `applyExternalTextChange`, `setMode`, `setTheme`, `setTextScale`, `setReaderWidth`, `setFileInfo`, `scrollToTop`, `focus`.
+
+## Architecture
+
+**Stack:** SwiftUI + AppKit (NSWindow, NSPanel, NSEvent) + WebKit (WKWebView) + CodeMirror 6 + TypeScript/esbuild.
+
+**Pattern:** Document-based app. Each window owns one `SpectrDocument` (value-type `FileDocument`). SwiftUI provides the binding; a coordinator bridges to WKWebView via `callAsyncJavaScript`. The web view hosts a single CodeMirror editor instance that handles both rendered and raw modes through decoration compartments — no HTML rendering, no separate preview.
+
+**Key design decision:** The editor IS the renderer. CodeMirror decorations transform raw markdown into rich typography while keeping the underlying text editable. Mode toggle swaps decoration sets, not view layers.
+
+**File structure:**
+- `spectr/` — Swift sources (12 files), Resources (Editor bundle), Assets
+- `tools/editor/` — TypeScript source, esbuild config, node_modules
+- `spectrTests/` — 3 test files (DocumentFileSync, EditorZoom, SpectrDocument)
+- `osis/` — Product documentation
+
+**Tests:** Unit tests for document read/write, file sync controller logic, and zoom controller behavior.
+
+**Build:** Single macOS target, sandboxed, read/write file access, no entitlements file checked in.
 
 ## State Summary
 
-- **Files:** SwiftUI document shell, welcome screen, quick open panel, bundled editor resources
-- **Dependencies:** SwiftUI + WebKit + StoreKit 2 at runtime, CodeMirror 6 + esbuild in the local editor workspace
-- **Tests:** None
-- **Build:** Single macOS target, sandboxed, read/write file access
-- **Business model:** OSS on GitHub, $14.99 one-time on App Store (48-hour trial), Gumroad direct sales
-- **Maturity:** v1 feature-complete, pre-launch. Needs paywall integration and App Store submission.
+- **Maturity:** v1 feature-complete, pre-launch. Live external change visualization is the latest shipped feature. Paywall integration and App Store submission remain.
+- **Active phase:** `phase-1.4-live-changes` (complete). Next: `phase-1.5-full-md-support`.
