@@ -1,0 +1,53 @@
+---
+import "../styles/global.css";
+
+interface Props {
+  title: string;
+  description: string;
+}
+
+const { title, description } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/og.png" />
+    <script is:inline>
+      // Resolve theme before first paint to avoid a flash.
+      const media = window.matchMedia("(prefers-color-scheme: dark)");
+      const apply = () => {
+        document.documentElement.dataset.theme = media.matches ? "dark" : "light";
+      };
+      apply();
+      media.addEventListener("change", apply);
+    </script>
+  </head>
+  <body>
+    <slot />
+    <script is:inline>
+      // Any interactive checkbox on the page toggles like the app's task lists.
+      document.addEventListener("click", (e) => {
+        const box = e.target.closest("button.md-checkbox");
+        if (!box) return;
+        const checked = !box.classList.contains("checked");
+        box.classList.toggle("checked", checked);
+        box.setAttribute("aria-pressed", String(checked));
+        const label = box.nextElementSibling;
+        if (label) label.classList.toggle("md-done", checked);
+        box.dispatchEvent(
+          new CustomEvent("spectr:task-toggle", { bubbles: true, detail: { checked } })
+        );
+      });
+    </script>
+  </body>
+</html>

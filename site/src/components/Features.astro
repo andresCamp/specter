@@ -1,0 +1,675 @@
+---
+const github = "https://github.com/andresCamp/spectr";
+---
+
+<section class="feature">
+  <div class="wrap">
+    <h2 class="section-title">Live changes</h2>
+    <p class="section-body">
+      When Claude, git, or any other tool writes the file, old lines blur away and new ones
+      fade in, without moving your scroll. Spectr is built for documents that other things edit.
+    </p>
+
+    <div class="live-duo" id="live-duo">
+      <div class="agent-panel mono" aria-label="Coding agent editing the file">
+        <div class="agent-chrome">
+          <span class="agent-title">coding agent</span>
+        </div>
+        <div class="agent-body" id="agent-body">
+          <span class="agent-idle">idle</span>
+        </div>
+      </div>
+
+      <div class="live-panel" id="live-panel">
+        <div class="live-chrome">
+          <span class="live-title mono">launch.md</span>
+          <span class="live-badge mono" id="live-badge">watching</span>
+        </div>
+        <div class="live-body">
+          <p class="md-h3">Launch checklist</p>
+          <p class="live-line md-task" data-line="a"><button class="md-checkbox" aria-pressed="false" aria-label="Toggle: Draft the announcement post"></button><span class="live-text">Draft the announcement post</span></p>
+          <p class="live-line md-task" data-line="c"><button class="md-checkbox" aria-pressed="false" aria-label="Toggle: Record the demo"></button><span class="live-text">Record the demo</span></p>
+          <p class="live-line" data-line="b"><span class="live-text live-note">Waiting on edits from the agent.</span></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="feature">
+  <div class="wrap">
+    <h2 class="section-title">Quick Open</h2>
+    <p class="section-body">
+      <kbd>⌘P</kbd> finds every markdown file in your project. Each document gets its own
+      fingerprint, generated from its content, so you recognize files by sight. Try one.
+    </p>
+
+    <div class="qo-grid">
+      <button class="qo-card" data-file="readme" data-seed="readme">
+        <canvas class="qo-mosaic" aria-hidden="true"></canvas>
+        <span class="qo-name">readme.md</span>
+        <span class="qo-path mono">./</span>
+      </button>
+      <button class="qo-card" data-file="roadmap" data-seed="roadmap-2026">
+        <canvas class="qo-mosaic" aria-hidden="true"></canvas>
+        <span class="qo-name">roadmap.md</span>
+        <span class="qo-path mono">docs/</span>
+      </button>
+      <button class="qo-card" data-file="design" data-seed="design-notes-spectr">
+        <canvas class="qo-mosaic" aria-hidden="true"></canvas>
+        <span class="qo-name">design.md</span>
+        <span class="qo-path mono">notes/</span>
+      </button>
+      <button class="qo-card" data-file="changelog" data-seed="changelog-v1">
+        <canvas class="qo-mosaic" aria-hidden="true"></canvas>
+        <span class="qo-name">changelog.md</span>
+        <span class="qo-path mono">./</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+<dialog class="qo-dialog" id="qo-dialog" aria-labelledby="qo-title">
+  <div class="app-window qo-window">
+    <div class="window-chrome">
+      <div class="traffic-lights">
+        <button class="light close" id="qo-close" aria-label="Close document"></button>
+        <span class="light min"></span>
+        <span class="light max"></span>
+      </div>
+      <span class="window-title" id="qo-title">readme.md</span>
+      <span></span>
+    </div>
+    <canvas class="qo-doc-mosaic" id="qo-doc-mosaic" aria-hidden="true"></canvas>
+    <div class="doc-meta">
+      <span class="doc-meta-item"><span class="doc-meta-label">path</span> <span id="qo-meta-path"></span></span>
+      <span class="doc-meta-item"><span class="doc-meta-label">edited</span> today</span>
+    </div>
+    <div class="qo-doc-body" id="qo-doc-body"></div>
+  </div>
+</dialog>
+
+<template data-file="readme">
+  <p class="md-h1">Spectr</p>
+  <p>The most beautiful way to read and edit markdown on your Mac.</p>
+  <p class="md-h2">Install</p>
+  <p class="md-bullet"><span>Download the latest release from <a href={github}>GitHub</a></span></p>
+  <p class="md-bullet"><span>Or build from source with Xcode</span></p>
+  <p class="md-quote">Open a file. That is the whole manual.</p>
+</template>
+
+<template data-file="roadmap">
+  <p class="md-h1">Roadmap</p>
+  <p class="md-task"><button class="md-checkbox checked" aria-pressed="true" aria-label="Toggle: Live external changes"></button><span class="md-done">Live external changes</span></p>
+  <p class="md-task"><button class="md-checkbox checked" aria-pressed="true" aria-label="Toggle: Quick Open"></button><span class="md-done">Quick Open</span></p>
+  <p class="md-task"><button class="md-checkbox" aria-pressed="false" aria-label="Toggle: Full markdown support"></button><span>Full markdown support</span></p>
+  <p class="md-task"><button class="md-checkbox" aria-pressed="false" aria-label="Toggle: App Store release"></button><span>App Store release</span></p>
+</template>
+
+<template data-file="design">
+  <p class="md-h1">Design notes</p>
+  <p>Warm paper in the light, embers in the dark. One accent: <code class="md-code">#e3bd96</code>.</p>
+  <p class="md-quote">Beauty is a feature, not a coat of paint.</p>
+  <p class="md-task"><button class="md-checkbox" aria-pressed="false" aria-label="Toggle: Revisit heading rhythm at small sizes"></button><span>Revisit heading rhythm at small sizes</span></p>
+</template>
+
+<template data-file="changelog">
+  <p class="md-h1">Changelog</p>
+  <p class="md-bullet"><span><strong>Live changes.</strong> External edits blur out and fade back in.</span></p>
+  <p class="md-bullet"><span><strong>Quick Open.</strong> <code class="md-code">⌘P</code> across your whole project.</span></p>
+  <p class="md-bullet"><span><strong>Light mode polish.</strong> Plus a document stats badge.</span></p>
+</template>
+
+<section class="feature">
+  <div class="wrap two-up">
+    <div>
+      <h2 class="section-title">Plain files, open source</h2>
+      <p class="section-body">
+        Spectr edits the .md on disk. No database, no sync service, no lock-in.
+        Your documents are yours, and so is <a href={github}>the code</a>.
+      </p>
+    </div>
+    <div>
+      <h2 class="section-title">Native and fast</h2>
+      <p class="section-body">
+        A real Mac app, not a wrapped website. It launches instantly, sips memory,
+        and feels at home next to your terminal.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="feature">
+  <div class="wrap">
+    <h2 class="section-title">And the rest</h2>
+    <div class="rest-grid">
+      <div class="rest-item">
+        <span class="rest-name">Format as you type</span>
+        <span class="rest-keys"><kbd>⌘B</kbd> <kbd>⌘I</kbd> <kbd>⌘E</kbd></span>
+      </div>
+      <div class="rest-item">
+        <span class="rest-name">Pin window on top</span>
+        <span class="rest-keys"><kbd>⌘⇧P</kbd></span>
+      </div>
+      <div class="rest-item">
+        <span class="rest-name">Reader margins</span>
+        <span class="rest-keys"><kbd>⌘⇧M</kbd></span>
+      </div>
+      <div class="rest-item">
+        <span class="rest-name">Text size</span>
+        <span class="rest-keys"><kbd>⌘+</kbd> <kbd>⌘−</kbd></span>
+      </div>
+      <div class="rest-item">
+        <span class="rest-name">Shortcut guide</span>
+        <span class="rest-keys"><kbd>hold ⌘</kbd></span>
+      </div>
+      <div class="rest-item">
+        <span class="rest-name">Pinch to zoom</span>
+        <span class="rest-keys mono">trackpad</span>
+      </div>
+      <div class="rest-item">
+        <span class="rest-name">Light &amp; dark themes</span>
+        <span class="rest-keys mono">automatic</span>
+      </div>
+      <div class="rest-item">
+        <span class="rest-name">Document stats</span>
+        <span class="rest-keys mono">words · tokens</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .feature {
+    padding: 72px 0;
+  }
+
+  /* Live changes: agent + Spectr side by side */
+  .live-duo {
+    margin-top: 40px;
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    gap: 20px;
+    align-items: start;
+    max-width: 920px;
+  }
+
+  .agent-panel {
+    border-radius: 12px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--window-border);
+    overflow: hidden;
+    font-size: 12px;
+  }
+
+  .agent-chrome {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--divider-color);
+  }
+
+  .agent-title {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+  }
+
+  .agent-body {
+    padding: 14px 16px 18px;
+    min-height: 172px;
+    line-height: 1.8;
+  }
+
+  .agent-idle {
+    color: var(--text-muted);
+    opacity: 0.6;
+  }
+
+  .live-panel {
+    border-radius: 12px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--window-border);
+    box-shadow: var(--window-shadow);
+    overflow: hidden;
+  }
+
+  .live-chrome {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--divider-color);
+  }
+
+  .live-title {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .live-badge {
+    font-size: 10.5px;
+    color: var(--trim-color);
+    opacity: 0.75;
+  }
+
+  .live-body {
+    padding: 20px 24px 26px;
+  }
+
+  .live-body p {
+    margin: 0;
+  }
+
+  .live-line {
+    border-radius: 6px;
+    padding: 1px 6px;
+    margin-left: -6px !important;
+  }
+
+  .live-note {
+    color: var(--text-muted);
+  }
+
+  .live-line.blur-out {
+    animation: live-blur-out 600ms cubic-bezier(0.4, 0, 1, 1) forwards;
+  }
+
+  @keyframes live-blur-out {
+    to {
+      filter: blur(6px);
+      opacity: 0;
+      transform: scale(0.98);
+    }
+  }
+
+  .live-line.fade-in {
+    animation: live-fade-in 3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes live-fade-in {
+    0% {
+      opacity: 0;
+      background: color-mix(in srgb, var(--trim-color) 8%, transparent);
+    }
+    20% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 1;
+      background: transparent;
+    }
+  }
+
+  /* Quick Open cards */
+  .qo-grid {
+    margin-top: 40px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    max-width: 720px;
+  }
+
+  .qo-card {
+    text-align: left;
+    background: var(--bg-elevated);
+    border: 1px solid var(--window-border);
+    border-radius: 12px;
+    padding: 0 0 12px;
+    overflow: hidden;
+    cursor: pointer;
+    font-family: inherit;
+    color: inherit;
+    transition: border-color 150ms ease, transform 150ms ease;
+  }
+
+  .qo-card:hover {
+    border-color: color-mix(in srgb, var(--trim-color) 45%, transparent);
+  }
+
+  .qo-card:active {
+    transform: translateY(1px);
+  }
+
+  .qo-mosaic {
+    width: 100%;
+    height: 64px;
+  }
+
+  .qo-name {
+    display: block;
+    padding: 8px 12px 0;
+    font-size: 13px;
+    font-weight: 590;
+  }
+
+  .qo-path {
+    display: block;
+    padding: 0 12px;
+    font-size: 10.5px;
+    color: var(--text-muted);
+  }
+
+  /* Quick Open modal */
+  .qo-dialog {
+    border: none;
+    padding: 0;
+    background: transparent;
+    max-width: min(560px, calc(100vw - 32px));
+    width: 100%;
+    margin: auto; /* restore centering lost to the global reset */
+  }
+
+  .qo-dialog::backdrop {
+    background: color-mix(in srgb, var(--bg) 55%, transparent);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+
+  .qo-dialog[open] .qo-window {
+    animation: qo-pop 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes qo-pop {
+    from {
+      opacity: 0;
+      transform: scale(0.96) translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  .qo-doc-mosaic {
+    width: 100%;
+    height: 96px;
+  }
+
+  .qo-doc-body {
+    padding: 18px 32px 36px;
+  }
+
+  .qo-doc-body :global(p) {
+    margin: 0;
+  }
+
+  .qo-doc-body :global(p + p) {
+    margin-top: 4px;
+  }
+
+  /* Two-up */
+  .two-up {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+  }
+
+  /* Rest grid */
+  .rest-grid {
+    margin-top: 32px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+
+  .rest-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 16px;
+    border: 1px solid var(--divider-color);
+    border-radius: 12px;
+  }
+
+  .rest-name {
+    font-size: 13.5px;
+    font-weight: 590;
+  }
+
+  .rest-keys {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  @media (max-width: 860px) {
+    .rest-grid,
+    .qo-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .two-up {
+      grid-template-columns: 1fr;
+      gap: 40px;
+    }
+    .live-duo {
+      grid-template-columns: 1fr;
+    }
+    .agent-body {
+      min-height: 0;
+    }
+  }
+</style>
+
+<style is:global>
+  /* Agent panel rows are created by script, so they need unscoped styles. */
+  .agent-body .agent-cmd {
+    display: block;
+    color: var(--trim-color);
+    margin-bottom: 6px;
+    animation: diff-in 300ms ease both;
+  }
+
+  .agent-body .diff-line {
+    display: flex;
+    gap: 10px;
+    white-space: pre-wrap;
+    animation: diff-in 300ms ease both;
+    border-radius: 4px;
+    padding: 0 6px;
+    margin-left: -6px;
+  }
+
+  .agent-body .diff-sign {
+    flex-shrink: 0;
+  }
+
+  .agent-body .diff-line.del {
+    color: var(--diff-del);
+    background: color-mix(in srgb, var(--diff-del) 8%, transparent);
+  }
+
+  .agent-body .diff-line.add {
+    color: var(--diff-add);
+    background: color-mix(in srgb, var(--diff-add) 8%, transparent);
+  }
+
+  @keyframes diff-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+</style>
+
+<script>
+  import { mountMosaic } from "../scripts/mosaic.js";
+
+  document.querySelectorAll(".qo-card").forEach((card) => {
+    const canvas = card.querySelector(".qo-mosaic");
+    mountMosaic(canvas, {
+      seed: card.dataset.seed,
+      interactive: true,
+      pointerTarget: card,
+      fadeBottom: 0,
+      animateIn: false,
+    });
+  });
+
+  /* --- Live changes: scripted agent edits driving the Spectr panel --- */
+
+  const lines = {
+    a: document.querySelector('[data-line="a"]'),
+    c: document.querySelector('[data-line="c"]'),
+    b: document.querySelector('[data-line="b"]'),
+  };
+  const badge = document.getElementById("live-badge");
+  const agentBody = document.getElementById("agent-body");
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+  const steps = [
+    {
+      cmd: "⏺ Update launch.md",
+      diff: [
+        ["del", "- [ ] Draft the announcement post"],
+        ["add", "- [x] Draft the announcement post"],
+        ["del", "Waiting on edits from the agent."],
+        ["add", "One down, checked off at 9:41."],
+      ],
+      state: { a: true, c: false, note: "One down, checked off at 9:41." },
+      changed: ["a", "b"],
+    },
+    {
+      cmd: "⏺ Update launch.md",
+      diff: [
+        ["del", "- [ ] Record the demo"],
+        ["add", "- [x] Record the demo"],
+        ["del", "One down, checked off at 9:41."],
+        ["add", "Two down. Publishing next."],
+      ],
+      state: { a: true, c: true, note: "Two down. Publishing next." },
+      changed: ["c", "b"],
+    },
+    {
+      cmd: "⏺ Reset the demo",
+      diff: [
+        ["del", "- [x] Draft the announcement post"],
+        ["add", "- [ ] Draft the announcement post"],
+        ["del", "- [x] Record the demo"],
+        ["add", "- [ ] Record the demo"],
+      ],
+      state: { a: false, c: false, note: "Waiting on edits from the agent." },
+      changed: ["a", "c", "b"],
+    },
+  ];
+
+  function setTask(key, checked) {
+    const box = lines[key].querySelector(".md-checkbox");
+    const label = lines[key].querySelector(".live-text");
+    box.classList.toggle("checked", checked);
+    box.setAttribute("aria-pressed", String(checked));
+    label.classList.toggle("md-done", checked);
+  }
+
+  function applyState(state) {
+    setTask("a", state.a);
+    setTask("c", state.c);
+    lines.b.querySelector(".live-text").textContent = state.note;
+  }
+
+  function showAgentStep(step) {
+    agentBody.innerHTML = "";
+    const cmd = document.createElement("span");
+    cmd.className = "agent-cmd";
+    cmd.textContent = step.cmd;
+    agentBody.appendChild(cmd);
+    step.diff.forEach(([kind, text], i) => {
+      const row = document.createElement("span");
+      row.className = `diff-line ${kind}`;
+      row.style.animationDelay = `${150 + i * 130}ms`;
+      const sign = document.createElement("span");
+      sign.className = "diff-sign";
+      sign.textContent = kind === "del" ? "-" : "+";
+      row.appendChild(sign);
+      row.appendChild(document.createTextNode(text));
+      agentBody.appendChild(row);
+    });
+  }
+
+  let stepIndex = 0;
+
+  function cycle() {
+    const step = steps[stepIndex];
+    stepIndex = (stepIndex + 1) % steps.length;
+
+    showAgentStep(step);
+
+    setTimeout(() => {
+      badge.textContent = "file changed on disk";
+      for (const key of step.changed) {
+        lines[key].classList.remove("fade-in");
+        lines[key].classList.add("blur-out");
+      }
+    }, 1100);
+
+    setTimeout(() => {
+      applyState(step.state);
+      for (const key of step.changed) {
+        lines[key].classList.remove("blur-out");
+        lines[key].classList.add("fade-in");
+      }
+      badge.textContent = "watching";
+    }, 1720);
+  }
+
+  if (!reduced.matches) {
+    const duo = document.getElementById("live-duo");
+    const io = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && !duo.dataset.running) {
+        duo.dataset.running = "1";
+        setTimeout(cycle, 1200);
+        setInterval(cycle, 6800);
+      }
+    });
+    io.observe(duo);
+  } else {
+    // Static fallback: show the first edit already applied.
+    showAgentStep(steps[0]);
+    applyState(steps[0].state);
+  }
+
+  /* --- Quick Open modal --- */
+
+  const dialog = document.getElementById("qo-dialog");
+  const dialogTitle = document.getElementById("qo-title");
+  const dialogPath = document.getElementById("qo-meta-path");
+  const dialogBody = document.getElementById("qo-doc-body");
+  const dialogCanvas = document.getElementById("qo-doc-mosaic");
+  let dialogMosaic = null;
+
+  document.querySelectorAll(".qo-card").forEach((card) => {
+    card.addEventListener("click", () => {
+      const key = card.dataset.file;
+      const template = document.querySelector(`template[data-file="${key}"]`);
+      if (!template) return;
+
+      const name = card.querySelector(".qo-name").textContent;
+      const path = card.querySelector(".qo-path").textContent;
+      dialogTitle.textContent = name;
+      dialogPath.textContent = `~/project/${path === "./" ? "" : path}${name}`;
+      dialogBody.innerHTML = "";
+      dialogBody.appendChild(template.content.cloneNode(true));
+
+      dialog.showModal();
+      requestAnimationFrame(() => {
+        if (!dialogMosaic) {
+          dialogMosaic = mountMosaic(dialogCanvas, {
+            seed: card.dataset.seed,
+            interactive: true,
+            fadeBottom: 20,
+          });
+        } else {
+          dialogMosaic.setSeed(card.dataset.seed);
+        }
+      });
+    });
+  });
+
+  document.getElementById("qo-close").addEventListener("click", () => dialog.close());
+  dialog.addEventListener("click", (e) => {
+    if (e.target === dialog) dialog.close();
+  });
+</script>

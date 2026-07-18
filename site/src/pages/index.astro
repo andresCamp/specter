@@ -1,0 +1,23 @@
+---
+import Base from "../layouts/Base.astro";
+import Nav from "../components/Nav.astro";
+import Hero from "../components/Hero.astro";
+import Features from "../components/Features.astro";
+import Pricing from "../components/Pricing.astro";
+import Faq from "../components/Faq.astro";
+import Footer from "../components/Footer.astro";
+---
+
+<Base
+  title="Spectr - Markdown, beautifully"
+  description="Spectr is a fast, native macOS editor that makes every .md file look incredible. Free 48-hour trial, then $14.99 once. Open source."
+>
+  <Nav />
+  <main>
+    <Hero />
+    <Features />
+    <Pricing />
+    <Faq />
+  </main>
+  <Footer />
+</Base>

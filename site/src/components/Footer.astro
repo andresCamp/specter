@@ -1,0 +1,40 @@
+---
+const github = "https://github.com/andresCamp/spectr";
+const year = new Date().getFullYear();
+---
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <span class="footer-copy">© {year} Andrés Campos</span>
+    <a class="footer-link" href={github}>GitHub</a>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    border-top: 1px solid var(--divider-color);
+    padding: 28px 0;
+  }
+
+  .footer-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .footer-copy {
+    font-size: 12.5px;
+    color: var(--text-muted);
+  }
+
+  .footer-link {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 150ms ease;
+  }
+
+  .footer-link:hover {
+    color: var(--trim-color);
+  }
+</style>

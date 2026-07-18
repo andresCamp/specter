@@ -1,0 +1,92 @@
+---
+const github = "https://github.com/andresCamp/spectr";
+---
+
+<header class="nav">
+  <div class="nav-inner wrap">
+    <a class="nav-link" href={github}>GitHub</a>
+    <a class="nav-logo" href="/" aria-label="Spectr home">
+      <svg class="nav-mark" viewBox="0 0 377 404" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M182.378 0H194.282C200.796 2.84754 204.237 3.33539 209.729 8.88417C221.879 21.161 228.75 40.1585 235.5 55.8411C246.415 81.2009 258.476 100.814 285.776 76.7909C302.05 62.4713 315.08 41.8945 337.917 38.1278C344.089 36.9822 350.154 37.0024 356.035 39.5666C360.901 41.6475 364.711 45.6144 366.596 50.5588C372.615 65.938 361.14 91.3808 364.282 108.299C365.369 114.156 370.445 119.082 373.212 124.276C374.931 127.503 375.693 130.741 377 134.141V143.18C376.012 145.204 375.479 147.48 374.619 149.565C366.461 169.33 344.508 175.724 328.079 185.96C316.9 192.987 307.151 202.067 299.351 212.721C287.538 228.682 280.809 245.791 274.498 264.351C260.316 306.061 240.945 346.696 213.69 381.514C206.848 390.255 195.669 408.664 182.264 401.594C173.95 397.095 168.338 388.011 162.653 380.724C140.445 352.264 123.315 319.533 110.324 285.927C100.438 260.353 94.6301 236.158 78.1586 213.539C70.099 202.321 59.8999 192.809 48.1489 185.55C33.2323 176.487 17.554 171.776 6.37846 157.059C2.48006 151.926 2.52098 147.649 0 143.53V133.442C1.52499 131.171 2.23371 126.647 3.77618 124.244C10.2396 114.176 13.5738 111.898 13.0172 99.3421C12.7716 94.4362 12.2599 89.5472 11.4845 84.6965C9.77446 73.7367 6.52299 61.315 10.4154 50.5799C14.7804 38.541 27.5055 36.0264 38.7729 38.0853C56.2725 40.6522 70.7414 56.0608 82.0664 68.2062C111.175 99.4229 127.249 91.4586 141.982 54.6759C147.949 39.7784 156.413 19.2686 168.045 7.99547C173.019 3.1751 176.517 2.66341 182.378 0Z" fill="currentColor"/>
+      </svg>
+      <span class="nav-name">Spectr</span>
+    </a>
+    <a class="btn btn-primary nav-cta" href={`${github}/releases/latest`}>Download for Mac</a>
+  </div>
+</header>
+
+<style>
+  .nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    background: color-mix(in srgb, var(--bg) 62%, transparent);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    backdrop-filter: blur(18px) saturate(160%);
+    border-bottom: 1px solid color-mix(in srgb, var(--divider-color) 60%, transparent);
+  }
+
+  .nav-inner {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    width: 100%;
+  }
+
+  .nav-link {
+    justify-self: start;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    color: var(--text-muted);
+    transition: color 150ms ease;
+  }
+
+  .nav-link:hover {
+    color: var(--trim-color);
+  }
+
+  .nav-logo {
+    justify-self: center;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    text-decoration: none;
+    color: var(--text-primary);
+  }
+
+  .nav-mark {
+    width: 20px;
+    height: 21px;
+    color: var(--trim-color);
+  }
+
+  .nav-name {
+    font-size: 16px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+  }
+
+  .nav-cta {
+    justify-self: end;
+    padding: 8px 16px;
+    font-size: 13.5px;
+  }
+
+  @media (max-width: 560px) {
+    .nav-link {
+      display: none;
+    }
+    .nav-inner {
+      grid-template-columns: 1fr auto;
+    }
+    .nav-logo {
+      justify-self: start;
+    }
+  }
+</style>

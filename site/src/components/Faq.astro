@@ -1,0 +1,100 @@
+---
+const github = "https://github.com/andresCamp/spectr";
+---
+
+<section class="faq">
+  <div class="wrap faq-wrap">
+    <h2 class="section-title">Questions</h2>
+
+    <details>
+      <summary>How does the trial work?</summary>
+      <p>
+        Download Spectr and use everything, free, for 48 hours. No account, no credit card.
+        When the trial ends, you can purchase to keep going.
+      </p>
+    </details>
+
+    <details>
+      <summary>Is it really a one-time purchase?</summary>
+      <p>
+        Yes. $14.99 buys the app, and updates are included. No subscription, no upsell tiers.
+      </p>
+    </details>
+
+    <details>
+      <summary>Why is it paid if it's open source?</summary>
+      <p>
+        The <a href={github}>source is on GitHub</a>, and you're welcome to build it yourself.
+        The $14.99 buys the built, signed, notarized app with updates, and it funds the work.
+      </p>
+    </details>
+
+    <details>
+      <summary>Where do my documents live?</summary>
+      <p>
+        On your disk, as plain .md files. Spectr has no database and no sync service.
+        It opens the file, renders it beautifully, and writes your edits back.
+      </p>
+    </details>
+
+    <details>
+      <summary>What does it require?</summary>
+      <p>macOS 14 or later, on Apple Silicon or Intel.</p>
+    </details>
+  </div>
+</section>
+
+<style>
+  .faq {
+    padding: 96px 0 120px;
+    border-top: 1px solid var(--divider-color);
+  }
+
+  .faq-wrap {
+    max-width: 640px;
+  }
+
+  details {
+    margin-top: 20px;
+    border-bottom: 1px solid var(--divider-color);
+    padding-bottom: 20px;
+  }
+
+  summary {
+    font-size: 16px;
+    font-weight: 590;
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: color 150ms ease;
+  }
+
+  summary:hover {
+    color: var(--trim-color);
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  summary::after {
+    content: "+";
+    font-weight: 400;
+    font-size: 20px;
+    color: var(--text-muted);
+    transition: transform 200ms ease;
+  }
+
+  details[open] summary::after {
+    transform: rotate(45deg);
+  }
+
+  details p {
+    margin-top: 10px;
+    color: var(--text-muted);
+    font-size: 15px;
+    max-width: 58ch;
+  }
+</style>
