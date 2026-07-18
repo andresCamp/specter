@@ -12,9 +12,11 @@
     "astro": "astro"
   },
   "dependencies": {
-    "astro": "^7.1.0"
+    "astro": "^7.1.0",
+    "stripe": "^22.3.2"
   },
   "devDependencies": {
+    "typescript": "^7.0.2",
     "wrangler": "^4.112.0"
   }
 }

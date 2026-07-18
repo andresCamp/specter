@@ -1,0 +1,132 @@
+---
+import Base from "../layouts/Base.astro";
+import Nav from "../components/Nav.astro";
+import Footer from "../components/Footer.astro";
+
+const github = "https://github.com/andresCamp/spectr";
+---
+
+<Base
+  title="Thank you — Spectr"
+  description="Your Spectr license key."
+>
+  <Nav />
+  <main class="thanks">
+    <div class="wrap">
+      <h1 class="thanks-title">Thank you.</h1>
+      <p class="thanks-body">Spectr is yours. Here is your license key:</p>
+
+      <div class="key-card" id="key-card" data-state="loading">
+        <code class="key mono" id="license-key">Fetching your key…</code>
+        <button class="btn btn-secondary" id="copy-key" hidden>Copy</button>
+      </div>
+
+      <p class="thanks-steps" id="thanks-steps" hidden>
+        Open Spectr → <strong>Spectr&nbsp;›&nbsp;License…</strong> and paste the
+        key to activate. A receipt is on its way to your email.
+      </p>
+
+      <p class="thanks-alt">
+        Don't have the app yet?
+        <a href={`${github}/releases/latest`}>Download for Mac</a>
+      </p>
+    </div>
+  </main>
+  <Footer />
+</Base>
+
+<script>
+  const keyEl = document.getElementById("license-key")!;
+  const card = document.getElementById("key-card")!;
+  const copyBtn = document.getElementById("copy-key") as HTMLButtonElement;
+  const steps = document.getElementById("thanks-steps")!;
+
+  const sessionId = new URLSearchParams(location.search).get("session_id");
+
+  async function loadKey() {
+    if (!sessionId) {
+      keyEl.textContent = "Missing checkout session — use the link from your purchase.";
+      card.dataset.state = "error";
+      return;
+    }
+    try {
+      const res = await fetch(`/api/license?session_id=${encodeURIComponent(sessionId)}`);
+      const data = await res.json();
+      if (!res.ok || !data.key) throw new Error(data.error ?? "unknown");
+      keyEl.textContent = data.key;
+      card.dataset.state = "ready";
+      copyBtn.hidden = false;
+      steps.hidden = false;
+    } catch {
+      keyEl.textContent =
+        "We couldn't fetch your key. Refresh in a moment — if it persists, email andrescampos220@gmail.com with your receipt.";
+      card.dataset.state = "error";
+    }
+  }
+
+  copyBtn.addEventListener("click", async () => {
+    await navigator.clipboard.writeText(keyEl.textContent ?? "");
+    copyBtn.textContent = "Copied";
+    setTimeout(() => (copyBtn.textContent = "Copy"), 1500);
+  });
+
+  loadKey();
+</script>
+
+<style>
+  .thanks {
+    padding: 180px 0 140px;
+    text-align: center;
+    min-height: 60vh;
+  }
+
+  .thanks-title {
+    font-size: clamp(34px, 5vw, 48px);
+    font-weight: 700;
+    letter-spacing: -0.025em;
+  }
+
+  .thanks-body {
+    margin-top: 14px;
+    font-size: 17px;
+    color: var(--text-muted);
+  }
+
+  .key-card {
+    margin: 32px auto 0;
+    max-width: 560px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    padding: 22px 26px;
+    border: 1px solid var(--divider-color);
+    border-radius: 12px;
+  }
+
+  .key {
+    font-size: 16px;
+    letter-spacing: 0.04em;
+    user-select: all;
+    word-break: break-all;
+  }
+
+  .key-card[data-state="error"] .key {
+    font-size: 14px;
+    color: var(--text-muted);
+    letter-spacing: normal;
+  }
+
+  .thanks-steps {
+    margin-top: 22px;
+    font-size: 14.5px;
+    color: var(--text-muted);
+  }
+
+  .thanks-alt {
+    margin-top: 40px;
+    font-size: 13.5px;
+    color: var(--text-muted);
+  }
+</style>
