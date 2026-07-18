@@ -22,8 +22,9 @@
     // Swap for the live-mode price id at launch.
     "STRIPE_PRICE_ID": "price_1TubjqK1y82g6XylGHGojfoi"
   },
-  // Secrets (set in dashboard → Worker → Settings → Variables and Secrets):
-  //   STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
+  // Secrets STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET are stored encrypted on the
+  // worker itself (Settings → Variables and Secrets) — never in this file: the repo is
+  // public. Local dev values live in the gitignored .dev.vars.
   "observability": {
     "enabled": true
   }
