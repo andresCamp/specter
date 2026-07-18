@@ -16,8 +16,9 @@
     }
   ],
   "vars": {
-    // TODO: replace with the real Stripe Price id once the product is created.
-    "STRIPE_PRICE_ID": "price_REPLACE_ME"
+    // Test-mode price for prod_UuQbr77LFQfhJa ($14.99 one-time).
+    // Swap for the live-mode price id at launch.
+    "STRIPE_PRICE_ID": "price_1TubjqK1y82g6XylGHGojfoi"
   },
   // Secrets (set in dashboard → Worker → Settings → Variables and Secrets):
   //   STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
